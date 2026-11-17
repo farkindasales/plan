@@ -30,6 +30,9 @@ button.primary{background:var(--accent);border-color:var(--accent);color:var(--a
 button.ghost{background:transparent}
 button.danger{color:var(--bad)}
 button:active{transform:scale(.98)}
+.trk{display:block;width:100%;margin-bottom:10px;padding:12px;font-weight:700;border-radius:12px;color:#fff}
+.trk.on{background:var(--good);border-color:var(--good)}
+.trk.off{background:var(--bad);border-color:var(--bad)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--soft);border-color:transparent}
 .banner p{margin:0;font-size:14px}
@@ -96,6 +99,8 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
       <button id="nextDay" aria-label="▶">▶</button>
     </div>
   </header>
+
+  <button id="trk" class="trk on"></button>
 
   <div class="card banner" id="banner">
     <p id="bannerText"></p>
@@ -187,7 +192,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
     </div>
   </details>
 
-  <footer>v0.4</footer>
+  <footer>v0.5</footer>
 </div>
 
 <div id="ov" role="dialog" aria-modal="true">
@@ -385,6 +390,7 @@ function dropAlerts(id){
 function tick(){
   var now=Date.now(),changed=false,l=L(),keys=[shiftKey(todayKey(),-1),todayKey()];
   if(ensureDaily(todayKey())|ensureDaily(shiftKey(todayKey(),1)))renderList();
+  if(+S.settings.paused){renderNow();return;}
   keys.forEach(function(k){
     (S.days[k]||[]).forEach(function(t){
       var st=startTs(k,t.time),en=st+t.dur*60000;
@@ -511,7 +517,32 @@ function renderList(){
       '<button class="ghost" data-act="edit" aria-label="edit">✎</button><button class="ghost danger" data-act="del" aria-label="delete">✕</button></div></li>';
   }).join('');
 }
-function renderAll(){applyLang();renderBanner();renderDate();renderList();renderNow();fillSettings();}
+function renderTrk(){
+  var b=$('#trk'),tr=S.settings.lang==='tr',p=+S.settings.paused;
+  b.className='trk '+(p?'off':'on');
+  b.textContent=p?(tr?'⏸ TAKİP DURDU — DEVAM ET ▶':'⏸ TRACKING PAUSED — RESUME ▶'):(tr?'● TAKİP AÇIK — DURDUR ⏸':'● TRACKING ON — PAUSE ⏸');
+}
+$('#trk').onclick=function(){
+  var tr=S.settings.lang==='tr';
+  if(+S.settings.paused){
+    var now=Date.now(),pre=+S.settings.pre||0;
+    [shiftKey(todayKey(),-1),todayKey()].forEach(function(k){(S.days[k]||[]).forEach(function(t){
+      if(t.status!=='pending')return;
+      var st=startTs(k,t.time);
+      if(now>=st-pre*60000)t.pre=true;
+      if(now>=st)t.alerted=true;
+    });});
+    S.settings.paused=0;save();renderAll();tick();
+    toast(tr?'Takip devam ediyor ▶':'Tracking resumed ▶');
+  }else{
+    S.settings.paused=1;queue=[];
+    save();
+    if(cur)closeOv();else{try{speechSynthesis.cancel();}catch(e){}}
+    renderAll();
+    toast(tr?'Takip durduruldu. Alarm yok.':'Tracking paused. No alarms.');
+  }
+};
+function renderAll(){applyLang();renderBanner();renderDate();renderList();renderNow();fillSettings();renderTrk();}
 
 /* ---------- list actions ---------- */
 var armed={};
