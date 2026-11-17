@@ -56,6 +56,7 @@ button:active{transform:scale(.98)}
 .acts{display:flex;gap:4px;align-items:center}
 .acts button{padding:5px 8px;font-size:13px}
 .empty{color:var(--muted);text-align:center;padding:18px 6px}
+.notes{color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
 form.add{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 form.add #fTitle{grid-column:1/-1;order:-1}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
@@ -75,7 +76,8 @@ details .inner{padding:4px 0 14px;display:grid;gap:10px}
 #ov .k{font-size:15px;opacity:.85;text-transform:uppercase;letter-spacing:1.2px;font-weight:600}
 #ov .tm{font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin:6px 0}
 #ov .tt{font-size:30px;font-weight:700;max-width:560px;word-break:break-word;margin-bottom:6px}
-#ov .sub{opacity:.85;margin-bottom:26px}
+#ov .sub{opacity:.85;margin-bottom:12px}
+#ov .nt{opacity:.85;font-size:15px;max-width:560px;margin-bottom:18px;word-break:break-word}
 #ov .ob{display:grid;gap:10px;width:100%;max-width:340px}
 #ov button{border:0;padding:16px;font-size:18px;border-radius:14px;font-weight:700}
 #ov .b1{background:#fff;color:#14213d}
@@ -135,10 +137,25 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
     <summary data-i="toolsH">Gün araçları</summary>
     <div class="inner">
       <div class="btnrow">
+        <button id="shPull" class="primary" data-i="shPull">Sheet'ten çek</button>
         <button id="copyPrev" data-i="copyPrev">Önceki günü kopyala</button>
         <button id="testAlarm" data-i="test">Alarmı test et</button>
         <button id="clearDay" class="danger" data-i="clear">Günü temizle</button>
       </div>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i="shH">Google Sheet bağlantısı</summary>
+    <div class="inner">
+      <p class="hint" data-i="shHint"></p>
+      <input type="url" id="shUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="btnrow">
+        <button class="primary" id="shSave" data-i="shSave">Kaydet ve çek</button>
+        <button id="shNow" data-i="shNow">Şimdi çek</button>
+        <button id="shOff" class="danger" data-i="shOff">Bağlantıyı kaldır</button>
+      </div>
+      <p class="hint" id="shStatus"></p>
     </div>
   </details>
 
@@ -168,7 +185,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
     </div>
   </details>
 
-  <footer>v0.1</footer>
+  <footer>v0.2</footer>
 </div>
 
 <div id="ov" role="dialog" aria-modal="true">
@@ -176,6 +193,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
   <div class="tm" id="ovTime"></div>
   <div class="tt" id="ovTitle"></div>
   <div class="sub" id="ovSub"></div>
+  <div class="nt" id="ovNotes"></div>
   <div class="ob">
     <button class="b1" id="ovB1"></button>
     <button class="b2" id="ovB2"></button>
@@ -212,7 +230,11 @@ var T={
   imported:function(a,b){return a+' görev eklendi'+(b?', '+b+' satır atlandı':'')+'.';},
   copied:'Kopyalandı.',copyFail:'Kopyalanamadı — kutudaki metni elle seç ve kopyala.',restored:'Geri yüklendi.',badBak:'Yedek okunamadı.',
   sure:'Emin misin? Tekrar bas',copiedPrev:function(n){return n+' görev kopyalandı.';},nothingPrev:'Önceki günde görev yok.',
-  pre:'Yaklaşan'},
+  pre:'Yaklaşan',
+  shH:'Google Sheet bağlantısı',shHint:'Sheet\'indeki "PRO" sekmesinden günleri ve görevleri otomatik çeker. Apps Script web adresini (…/exec) buraya yapıştır. Sheet ana kaynaktır: oradaki değişiklik bir sonraki çekişte buraya gelir. Ara satırlarındaki yazılar, üstteki işin altında not olarak görünür.',
+  shSave:'Kaydet ve çek',shNow:'Şimdi çek',shOff:'Bağlantıyı kaldır',shPull:'Sheet\'ten çek',shNone:'Önce Sheet adresini "Google Sheet bağlantısı" bölümüne yapıştır.',
+  shLoading:'Çekiliyor…',shFail:'Çekilemedi',shBadResp:'Yanıt okunamadı. Apps Script\'te erişim "Herkes" seçili mi?',shBadUrl:'Adres https://script.google.com/ ile başlamalı ve /exec ile bitmeli.',shRemoved:'Bağlantı kaldırıldı.',
+  shDone:function(t,r){return 'Son çekiş '+t+': '+r.days+' gün, '+r.added+' yeni, '+r.removed+' kaldırıldı.';}},
  en:{app:'Daily Plan',startDay:'Start the day',add:'Add',save:'Save',cancel:'Cancel',titlePh:'Task',
   pasteH:'Paste from sheet',pasteHint:'Copy the time + task columns from Google Sheets and paste here. Example: "9:00-45  sport" or "13:30/14:45  KVKK". Break rows are skipped.',
   pasteGo:'Add to list',toolsH:'Day tools',copyPrev:'Copy previous day',test:'Test the alarm',clear:'Clear day',
@@ -236,7 +258,11 @@ var T={
   imported:function(a,b){return a+' tasks added'+(b?', '+b+' lines skipped':'')+'.';},
   copied:'Copied.',copyFail:'Could not copy — select the text in the box and copy it by hand.',restored:'Restored.',badBak:'Backup could not be read.',
   sure:'Sure? Tap again',copiedPrev:function(n){return n+' tasks copied.';},nothingPrev:'No tasks on the previous day.',
-  pre:'Coming up'}
+  pre:'Coming up',
+  shH:'Google Sheet link',shHint:'Pulls days and tasks automatically from the "PRO" tab of your sheet. Paste the Apps Script web address (…/exec) here. The sheet is the source of truth: changes there arrive on the next pull. Text on break rows shows as a note under the task above.',
+  shSave:'Save and pull',shNow:'Pull now',shOff:'Remove link',shPull:'Pull from Sheet',shNone:'Paste the Sheet address in the "Google Sheet link" section first.',
+  shLoading:'Pulling…',shFail:'Could not pull',shBadResp:'Unreadable reply. Is Apps Script access set to "Anyone"?',shBadUrl:'Address must start with https://script.google.com/ and end with /exec.',shRemoved:'Link removed.',
+  shDone:function(t,r){return 'Last pull '+t+': '+r.days+' days, '+r.added+' new, '+r.removed+' removed.';}}
 };
 
 function $(s){return document.querySelector(s);}
@@ -379,12 +405,12 @@ function showNext(){
   var l=L(),ov=$('#ov');
   if(cur.type==='test'){
     ov.className='show';$('#ovK').textContent=l.ovTest;$('#ovTime').textContent=fmtClock(new Date());
-    $('#ovTitle').textContent=cur.title;$('#ovSub').textContent='';
+    $('#ovTitle').textContent=cur.title;$('#ovSub').textContent='';$('#ovNotes').textContent='';
     setBtns([l.close],[]);alertOut(l.sayStart(fmtClock(new Date()),cur.title),3);return;
   }
   var t=findTask(cur.key,cur.id);
   if(!t){cur=null;showNext();return;}
-  $('#ovTime').textContent=t.time;$('#ovTitle').textContent=t.title;
+  $('#ovTime').textContent=t.time;$('#ovTitle').textContent=t.title;$('#ovNotes').textContent=(t.notes||[]).join(' · ');
   if(cur.type==='start'){
     ov.className='show';$('#ovK').textContent=l.ovStart;$('#ovSub').textContent=t.dur+' dk';
     setBtns([l.start,l.snooze,l.skip]);
@@ -473,7 +499,7 @@ function renderList(){
     var st=startTs(k,t.time),en=st+t.dur*60000,isCur=(t.status==='active'||t.status==='pending')&&now>=st&&now<en;
     return '<li class="task '+(isCur?'cur ':'')+(t.status==='done'?'done':'')+'" data-id="'+t.id+'">'+
       '<div class="t">'+esc(t.time)+'<small>'+t.dur+' dk</small></div>'+
-      '<div class="name">'+esc(t.title)+'</div>'+
+      '<div class="name">'+esc(t.title)+(t.notes&&t.notes.length?'<div class="notes">'+esc(t.notes.join(' · '))+'</div>':'')+'</div>'+
       '<div class="acts"><button class="chip '+t.status+'" data-act="cycle">'+esc(l.st[t.status]||t.status)+'</button>'+
       '<button class="ghost" data-act="edit" aria-label="edit">✎</button><button class="ghost danger" data-act="del" aria-label="delete">✕</button></div></li>';
   }).join('');
@@ -578,7 +604,7 @@ $('#dateLabel').onclick=function(){viewKey=todayKey();renderDate();renderList();
 $('#startDay').onclick=unlock;
 
 /* ---------- settings ---------- */
-function fillSettings(){$('#sLang').value=S.settings.lang;$('#sPre').value=String(S.settings.pre);$('#sRate').value=String(S.settings.rate);$('#sBreak').value=String(+S.settings.breakVoice);}
+function fillSettings(){fillSheet();$('#sLang').value=S.settings.lang;$('#sPre').value=String(S.settings.pre);$('#sRate').value=String(S.settings.rate);$('#sBreak').value=String(+S.settings.breakVoice);}
 $('#sLang').onchange=function(){S.settings.lang=this.value;save();renderAll();};
 $('#sPre').onchange=function(){S.settings.pre=+this.value;save();};
 $('#sRate').onchange=function(){S.settings.rate=+this.value;save();speak(S.settings.lang==='tr'?'Konuşma hızı bu.':'This is the speech speed.');};
@@ -599,12 +625,71 @@ $('#bakLoad').onclick=function(){
   });
 };
 
+/* ---------- Google Sheet sync ---------- */
+var syncing=false;
+function fillSheet(){var u=$('#shUrl');if(u&&document.activeElement!==u)u.value=S.settings.sheetUrl||'';showSyncStatus();}
+function showSyncStatus(msg){
+  var el=$('#shStatus');if(!el)return;
+  if(msg){el.textContent=msg;return;}
+  var r=S.settings.lastSyncInfo;
+  el.textContent=(S.settings.sheetUrl&&S.settings.lastSync&&r)?L().shDone(fmtClock(new Date(S.settings.lastSync)),r):'';
+}
+function cleanNotes(a){return Array.isArray(a)?a.slice(0,6).map(function(x){return String(x).slice(0,140);}).filter(Boolean):[];}
+function applySheet(j){
+  var added=0,removed=0,dayCount=0,days=j.days&&typeof j.days==='object'?j.days:{};
+  Object.keys(days).forEach(function(k){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!Array.isArray(days[k]))return;
+    dayCount++;
+    var keep=[],idx={},seen={};
+    tasks(k).forEach(function(t){if(t.src==='sheet')idx[t.time+'|'+t.title]=t;else keep.push(t);});
+    days[k].slice(0,40).forEach(function(it){
+      if(!it||!/^\d{2}:\d{2}$/.test(it.time||'')||!it.title)return;
+      var title=String(it.title).slice(0,140),dur=+it.dur||45;if(dur<5||dur>300)dur=45;
+      var key=it.time+'|'+title,ex=idx[key];
+      if(ex&&!seen[key]){ex.dur=dur;ex.notes=cleanNotes(it.notes);keep.push(ex);delete idx[key];seen[key]=1;}
+      else{var t=newTask(it.time,title,dur);t.src='sheet';t.notes=cleanNotes(it.notes);keep.push(t);added++;}
+    });
+    Object.keys(idx).forEach(function(kk){dropAlerts(idx[kk].id);removed++;});
+    S.days[k]=keep;
+  });
+  return {days:dayCount,added:added,removed:removed};
+}
+function syncSheet(manual){
+  var url=(S.settings.sheetUrl||'').trim(),l=L();
+  if(!url){if(manual)toast(l.shNone);return;}
+  if(syncing)return;
+  syncing=true;showSyncStatus(l.shLoading);
+  var ctl=('AbortController' in window)?new AbortController():null,to=setTimeout(function(){if(ctl)ctl.abort();},25000);
+  fetch(url,{cache:'no-store',signal:ctl?ctl.signal:undefined})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+    .then(function(txt){
+      var j;try{j=JSON.parse(txt);}catch(e){throw new Error(l.shBadResp);}
+      if(!j||j.error)throw new Error((j&&j.error)||l.shBadResp);
+      var res=applySheet(j);
+      S.settings.lastSync=Date.now();S.settings.lastSyncInfo=res;save();
+      renderList();renderNow();tick();showSyncStatus();
+      if(manual)toast(l.shDone(fmtClock(new Date()),res));
+    })
+    .catch(function(e){showSyncStatus(l.shFail+(e&&e.message?': '+e.message:''));if(manual)toast(l.shFail);})
+    .then(function(){clearTimeout(to);syncing=false;});
+}
+$('#shSave').onclick=function(){
+  var v=$('#shUrl').value.trim();
+  if(v&&!/^https:\/\/script\.google\.com\/\S+$/.test(v)){toast(L().shBadUrl);return;}
+  S.settings.sheetUrl=v;save();
+  if(!v){showSyncStatus();return;}
+  syncSheet(true);
+};
+$('#shNow').onclick=function(){syncSheet(true);};
+$('#shPull').onclick=function(){syncSheet(true);};
+$('#shOff').onclick=function(){S.settings.sheetUrl='';S.settings.lastSync=0;S.settings.lastSyncInfo=null;save();$('#shUrl').value='';showSyncStatus();toast(L().shRemoved);};
+
 /* ---------- toast ---------- */
 var toastT=null;
 function toast(msg,ms){var el=$('#toast');el.textContent=msg;el.style.display='block';clearTimeout(toastT);toastT=setTimeout(function(){el.style.display='none';},ms||3200);}
 
 /* ---------- boot ---------- */
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){if(unlocked&&!wakeOk)keepAwake();tick();}});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){if(unlocked&&!wakeOk)keepAwake();tick();if(S.settings.sheetUrl&&Date.now()-(S.settings.lastSync||0)>120000)syncSheet(false);}});
 try{
   if('serviceWorker' in navigator&&location.protocol==='https:'){
     navigator.serviceWorker.register('sw.js').then(function(r){swReg=r;}).catch(function(){});
@@ -612,6 +697,8 @@ try{
 }catch(e){}
 (function initTime(){var d=new Date();d.setMinutes(0);d.setHours(Math.min(23,d.getHours()+1));$('#fTime').value=fmtClock(d);})();
 renderAll();tick();
+setTimeout(function(){syncSheet(false);},800);
+setInterval(function(){syncSheet(false);},10*60000);
 setInterval(function(){
   var tk=todayKey();
   if(window.__lastDay&&window.__lastDay!==tk&&viewKey===window.__lastDay){viewKey=tk;renderDate();renderList();}
