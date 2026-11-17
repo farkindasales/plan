@@ -187,7 +187,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
     </div>
   </details>
 
-  <footer>v0.3</footer>
+  <footer>v0.4</footer>
 </div>
 
 <div id="ov" role="dialog" aria-modal="true">
@@ -236,6 +236,7 @@ var T={
   shH:'Google Sheet bağlantısı',shHint:'Sheet\'indeki "PRO" sekmesinden günleri ve görevleri otomatik çeker. Apps Script web adresini (…/exec) buraya yapıştır. Sheet ana kaynaktır: oradaki değişiklik bir sonraki çekişte buraya gelir. Ara satırlarındaki yazılar, üstteki işin altında not olarak görünür.',
   shSave:'Kaydet ve çek',shNow:'Şimdi çek',shOff:'Bağlantıyı kaldır',shPull:'Sheet\'ten çek',shNone:'Önce Sheet adresini "Google Sheet bağlantısı" bölümüne yapıştır.',
   dM:'Sabah alarmı',dE:'Akşam alarmı (mesai bitimi)',dMT:'Mesai başlıyor — günün planına bak',dET:'Mesai bitti — günü kapat, yarına hazırlan',
+  shLinked:'Sheet bağlandı ✓',
   shLoading:'Çekiliyor…',shFail:'Çekilemedi',shBadResp:'Yanıt okunamadı. Apps Script\'te erişim "Herkes" seçili mi?',shBadUrl:'Adres https://script.google.com/ ile başlamalı ve /exec ile bitmeli.',shRemoved:'Bağlantı kaldırıldı.',
   shDone:function(t,r){return 'Son çekiş '+t+': '+r.days+' gün, '+r.added+' yeni, '+r.removed+' kaldırıldı.';}},
  en:{app:'Daily Plan',startDay:'Start the day',add:'Add',save:'Save',cancel:'Cancel',titlePh:'Task',
@@ -265,6 +266,7 @@ var T={
   shH:'Google Sheet link',shHint:'Pulls days and tasks automatically from the "PRO" tab of your sheet. Paste the Apps Script web address (…/exec) here. The sheet is the source of truth: changes there arrive on the next pull. Text on break rows shows as a note under the task above.',
   shSave:'Save and pull',shNow:'Pull now',shOff:'Remove link',shPull:'Pull from Sheet',shNone:'Paste the Sheet address in the "Google Sheet link" section first.',
   dM:'Morning alarm',dE:'Evening alarm (end of work)',dMT:'Work starts — check today\'s plan',dET:'Work is over — close the day, prepare for tomorrow',
+  shLinked:'Sheet linked ✓',
   shLoading:'Pulling…',shFail:'Could not pull',shBadResp:'Unreadable reply. Is Apps Script access set to "Anyone"?',shBadUrl:'Address must start with https://script.google.com/ and end with /exec.',shRemoved:'Link removed.',
   shDone:function(t,r){return 'Last pull '+t+': '+r.days+' days, '+r.added+' new, '+r.removed+' removed.';}}
 };
@@ -721,6 +723,16 @@ try{
   }
 }catch(e){}
 (function initTime(){var d=new Date();d.setMinutes(0);d.setHours(Math.min(23,d.getHours()+1));$('#fTime').value=fmtClock(d);})();
+(function(){
+  try{
+    var q=new URLSearchParams(location.search).get('sheet');
+    if(q&&/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(q)){
+      S.settings.sheetUrl=q;S.settings.lastSync=0;save();
+      history.replaceState(null,'',location.pathname);
+      setTimeout(function(){toast(L().shLinked);},600);
+    }
+  }catch(e){}
+})();
 renderAll();tick();
 setTimeout(function(){syncSheet(false);},800);
 setInterval(function(){syncSheet(false);},10*60000);
