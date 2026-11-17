@@ -170,6 +170,8 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
         <select id="sRate"><option value="0.85">0.85×</option><option value="1">1×</option><option value="1.15">1.15×</option></select></div>
       <div class="set"><label for="sBreak" data-i="sBreak">Bitince "ara" de</label>
         <select id="sBreak"><option value="1">✓</option><option value="0">—</option></select></div>
+      <div class="set"><label for="dmOn" data-i="dM">Sabah alarmı</label><span style="display:grid;grid-template-columns:64px 1fr;gap:6px"><select id="dmOn"><option value="1">✓</option><option value="0">—</option></select><input type="time" id="dmTime"></span></div>
+      <div class="set"><label for="deOn" data-i="dE">Akşam alarmı (mesai bitimi)</label><span style="display:grid;grid-template-columns:64px 1fr;gap:6px"><select id="deOn"><option value="1">✓</option><option value="0">—</option></select><input type="time" id="deTime"></span></div>
     </div>
   </details>
 
@@ -185,7 +187,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
     </div>
   </details>
 
-  <footer>v0.2</footer>
+  <footer>v0.3</footer>
 </div>
 
 <div id="ov" role="dialog" aria-modal="true">
@@ -233,6 +235,7 @@ var T={
   pre:'Yaklaşan',
   shH:'Google Sheet bağlantısı',shHint:'Sheet\'indeki "PRO" sekmesinden günleri ve görevleri otomatik çeker. Apps Script web adresini (…/exec) buraya yapıştır. Sheet ana kaynaktır: oradaki değişiklik bir sonraki çekişte buraya gelir. Ara satırlarındaki yazılar, üstteki işin altında not olarak görünür.',
   shSave:'Kaydet ve çek',shNow:'Şimdi çek',shOff:'Bağlantıyı kaldır',shPull:'Sheet\'ten çek',shNone:'Önce Sheet adresini "Google Sheet bağlantısı" bölümüne yapıştır.',
+  dM:'Sabah alarmı',dE:'Akşam alarmı (mesai bitimi)',dMT:'Mesai başlıyor — günün planına bak',dET:'Mesai bitti — günü kapat, yarına hazırlan',
   shLoading:'Çekiliyor…',shFail:'Çekilemedi',shBadResp:'Yanıt okunamadı. Apps Script\'te erişim "Herkes" seçili mi?',shBadUrl:'Adres https://script.google.com/ ile başlamalı ve /exec ile bitmeli.',shRemoved:'Bağlantı kaldırıldı.',
   shDone:function(t,r){return 'Son çekiş '+t+': '+r.days+' gün, '+r.added+' yeni, '+r.removed+' kaldırıldı.';}},
  en:{app:'Daily Plan',startDay:'Start the day',add:'Add',save:'Save',cancel:'Cancel',titlePh:'Task',
@@ -261,6 +264,7 @@ var T={
   pre:'Coming up',
   shH:'Google Sheet link',shHint:'Pulls days and tasks automatically from the "PRO" tab of your sheet. Paste the Apps Script web address (…/exec) here. The sheet is the source of truth: changes there arrive on the next pull. Text on break rows shows as a note under the task above.',
   shSave:'Save and pull',shNow:'Pull now',shOff:'Remove link',shPull:'Pull from Sheet',shNone:'Paste the Sheet address in the "Google Sheet link" section first.',
+  dM:'Morning alarm',dE:'Evening alarm (end of work)',dMT:'Work starts — check today\'s plan',dET:'Work is over — close the day, prepare for tomorrow',
   shLoading:'Pulling…',shFail:'Could not pull',shBadResp:'Unreadable reply. Is Apps Script access set to "Anyone"?',shBadUrl:'Address must start with https://script.google.com/ and end with /exec.',shRemoved:'Link removed.',
   shDone:function(t,r){return 'Last pull '+t+': '+r.days+' days, '+r.added+' new, '+r.removed+' removed.';}}
 };
@@ -279,7 +283,7 @@ function load(){
   var d=null;
   try{d=JSON.parse(localStorage.getItem(KEY));}catch(e){}
   if(!d||typeof d!=='object'||!d.days)d={days:{},settings:{}};
-  d.settings=Object.assign({lang:'tr',pre:2,rate:1,breakVoice:1},d.settings||{});
+  d.settings=Object.assign({lang:'tr',pre:2,rate:1,breakVoice:1,dmOn:1,dmTime:'09:00',deOn:1,deTime:'21:00'},d.settings||{});
   return d;
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
@@ -378,6 +382,7 @@ function dropAlerts(id){
 }
 function tick(){
   var now=Date.now(),changed=false,l=L(),keys=[shiftKey(todayKey(),-1),todayKey()];
+  if(ensureDaily(todayKey())|ensureDaily(shiftKey(todayKey(),1)))renderList();
   keys.forEach(function(k){
     (S.days[k]||[]).forEach(function(t){
       var st=startTs(k,t.time),en=st+t.dur*60000;
@@ -417,7 +422,7 @@ function showNext(){
     var say=l.sayStart(t.time,t.title);
     alertOut(say,3);notify(l.ovStart+' '+t.time,t.title);
     repeatCount=0;clearInterval(repeatTimer);
-    repeatTimer=setInterval(function(){repeatCount++;if(repeatCount>4||!cur){clearInterval(repeatTimer);return;}alertOut(say,2);},30000);
+    repeatTimer=setInterval(function(){repeatCount++;if(repeatCount>(t.kind==='m'||t.kind==='e'?6:4)||!cur){clearInterval(repeatTimer);return;}alertOut(say,2);},30000);
   }else{
     ov.className='show end';$('#ovK').textContent=l.ovEnd;$('#ovSub').textContent=l.ovEndSub;
     setBtns([l.done,l.notDone]);
@@ -604,11 +609,14 @@ $('#dateLabel').onclick=function(){viewKey=todayKey();renderDate();renderList();
 $('#startDay').onclick=unlock;
 
 /* ---------- settings ---------- */
-function fillSettings(){fillSheet();$('#sLang').value=S.settings.lang;$('#sPre').value=String(S.settings.pre);$('#sRate').value=String(S.settings.rate);$('#sBreak').value=String(+S.settings.breakVoice);}
+function fillSettings(){fillSheet();$('#dmOn').value=String(+S.settings.dmOn);$('#dmTime').value=S.settings.dmTime;$('#deOn').value=String(+S.settings.deOn);$('#deTime').value=S.settings.deTime;$('#sLang').value=S.settings.lang;$('#sPre').value=String(S.settings.pre);$('#sRate').value=String(S.settings.rate);$('#sBreak').value=String(+S.settings.breakVoice);}
 $('#sLang').onchange=function(){S.settings.lang=this.value;save();renderAll();};
 $('#sPre').onchange=function(){S.settings.pre=+this.value;save();};
 $('#sRate').onchange=function(){S.settings.rate=+this.value;save();speak(S.settings.lang==='tr'?'Konuşma hızı bu.':'This is the speech speed.');};
 $('#sBreak').onchange=function(){S.settings.breakVoice=+this.value;save();};
+$('#dmOn').onchange=$('#deOn').onchange=$('#dmTime').onchange=$('#deTime').onchange=function(){
+  S.settings.dmOn=+$('#dmOn').value;S.settings.dmTime=$('#dmTime').value||'09:00';S.settings.deOn=+$('#deOn').value;S.settings.deTime=$('#deTime').value||'21:00';
+  save();tick();renderList();};
 
 /* ---------- backup ---------- */
 document.querySelector('details:last-of-type').addEventListener('toggle',function(){if(this.open)$('#bakBox').value=JSON.stringify(S);});
@@ -620,10 +628,27 @@ $('#bakCopy').onclick=function(){
 $('#bakLoad').onclick=function(){
   var b=this;twoTap(b,'bak',function(){
     b.textContent=L().bakLoad;
-    try{var d=JSON.parse($('#bakBox').value);if(!d||!d.days)throw 0;S=d;S.settings=Object.assign({lang:'tr',pre:2,rate:1,breakVoice:1},S.settings||{});save();renderAll();toast(L().restored);}
+    try{var d=JSON.parse($('#bakBox').value);if(!d||!d.days)throw 0;S=d;S.settings=Object.assign({lang:'tr',pre:2,rate:1,breakVoice:1,dmOn:1,dmTime:'09:00',deOn:1,deTime:'21:00'},S.settings||{});save();renderAll();toast(L().restored);}
     catch(e){toast(L().badBak);}
   });
 };
+
+/* ---------- fixed daily alarms ---------- */
+function ensureDaily(k){
+  var l=L(),a=tasks(k),ch=false;
+  [['m','dmOn','dmTime','dMT'],['e','deOn','deTime','dET']].forEach(function(x){
+    var on=+S.settings[x[1]],tm=S.settings[x[2]]||'',ex=null,i;
+    for(i=0;i<a.length;i++)if(a[i].src==='daily'&&a[i].kind===x[0]){ex=a[i];break;}
+    if(on&&/^\d{2}:\d{2}$/.test(tm)){
+      if(!ex){var t=newTask(tm,l[x[3]],3);t.src='daily';t.kind=x[0];a.push(t);ch=true;}
+      else if(ex.status==='pending'&&(ex.time!==tm||ex.title!==l[x[3]])){ex.time=tm;ex.title=l[x[3]];ex.alerted=false;ex.pre=false;ex.snooze=0;ch=true;}
+    }else if(ex&&ex.status==='pending'){
+      dropAlerts(ex.id);S.days[k]=a.filter(function(t){return t!==ex;});a=S.days[k];ch=true;
+    }
+  });
+  if(ch)save();
+  return ch;
+}
 
 /* ---------- Google Sheet sync ---------- */
 var syncing=false;
