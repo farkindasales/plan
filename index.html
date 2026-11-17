@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Günlük Plan</title>
+<meta name="theme-color" content="#1d2b53">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{
+  --bg:#f4f3ef; --card:#ffffff; --ink:#1b1f2a; --muted:#6b7280; --line:#e4e2dc;
+  --accent:#2b59c3; --accent-ink:#ffffff; --good:#2e8b57; --warn:#c98400; --bad:#c0392b; --soft:#eef2fb;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#12151c; --card:#1b1f29; --ink:#eceef3; --muted:#9aa3b2; --line:#2a2f3b; --soft:#1f2a44; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:640px;margin:0 auto;padding:14px 14px 80px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+h1{font-size:19px;margin:0;letter-spacing:.2px;white-space:nowrap}
+.datenav{display:flex;align-items:center;gap:6px}
+.datenav button{width:38px;height:38px;border-radius:10px}
+.datelabel{font-weight:600;font-size:15px;text-align:center;min-width:150px}
+.datelabel small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button.ghost{background:transparent}
+button.danger{color:var(--bad)}
+button:active{transform:scale(.98)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--soft);border-color:transparent}
+.banner p{margin:0;font-size:14px}
+.banner.ok{background:transparent;border:1px dashed var(--line)}
+.now .label{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
+.now .title{font-size:22px;font-weight:700;margin:2px 0}
+.now .meta{color:var(--muted);font-size:14px}
+.now .big{font-variant-numeric:tabular-nums;font-size:34px;font-weight:700;color:var(--accent)}
+.bar{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:10px}
+.bar>i{display:block;height:100%;background:var(--good);width:0}
+.list{list-style:none;margin:0;padding:0}
+.task{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line)}
+.task:last-child{border-bottom:0}
+.task .t{font-variant-numeric:tabular-nums;font-weight:700}
+.task .t small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.task .name{word-break:break-word}
+.task.cur{background:var(--soft);border-radius:10px}
+.task.done .name{text-decoration:line-through;color:var(--muted)}
+.chip{font-size:12px;padding:3px 8px;border-radius:20px;border:1px solid var(--line);white-space:nowrap;background:transparent;color:var(--muted)}
+.chip.done{color:var(--good);border-color:var(--good)}
+.chip.active{color:var(--accent);border-color:var(--accent)}
+.chip.missed,.chip.notdone{color:var(--bad);border-color:var(--bad)}
+.chip.skipped{color:var(--warn);border-color:var(--warn)}
+.acts{display:flex;gap:4px;align-items:center}
+.acts button{padding:5px 8px;font-size:13px}
+.empty{color:var(--muted);text-align:center;padding:18px 6px}
+form.add{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+form.add #fTitle{grid-column:1/-1;order:-1}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
+textarea{min-height:120px;resize:vertical;font-size:14px}
+form.add .row2{grid-column:1/-1;display:flex;gap:8px}
+form.add .row2 button{flex:1}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 14px;margin-bottom:10px}
+summary{cursor:pointer;padding:10px 0;font-weight:600}
+details .inner{padding:4px 0 14px;display:grid;gap:10px}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.set{display:grid;grid-template-columns:1fr 150px;gap:8px;align-items:center}
+/* overlay */
+#ov{position:fixed;inset:0;background:var(--accent);color:#fff;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:28px;z-index:50}
+#ov.end{background:#1f6f4a}
+#ov.show{display:flex}
+#ov .k{font-size:15px;opacity:.85;text-transform:uppercase;letter-spacing:1.2px;font-weight:600}
+#ov .tm{font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin:6px 0}
+#ov .tt{font-size:30px;font-weight:700;max-width:560px;word-break:break-word;margin-bottom:6px}
+#ov .sub{opacity:.85;margin-bottom:26px}
+#ov .ob{display:grid;gap:10px;width:100%;max-width:340px}
+#ov button{border:0;padding:16px;font-size:18px;border-radius:14px;font-weight:700}
+#ov .b1{background:#fff;color:#14213d}
+#ov .b2,#ov .b3{background:rgba(255,255,255,.16);color:#fff}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1b1f2a;color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.25);display:none;z-index:60}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 data-i="app">Günlük Plan</h1>
+    <div class="datenav">
+      <button id="prevDay" aria-label="◀">◀</button>
+      <div class="datelabel" id="dateLabel"></div>
+      <button id="nextDay" aria-label="▶">▶</button>
+    </div>
+  </header>
+
+  <div class="card banner" id="banner">
+    <p id="bannerText"></p>
+    <button class="primary" id="startDay" data-i="startDay">Günü başlat</button>
+  </div>
+
+  <div class="card now" id="nowCard"></div>
+
+  <div class="card">
+    <ul class="list" id="list"></ul>
+  </div>
+
+  <div class="card">
+    <form class="add" id="addForm">
+      <input type="time" id="fTime" required>
+      <input type="text" id="fTitle" data-ip="titlePh" placeholder="Görev" required maxlength="140">
+      <select id="fDur">
+        <option value="15">15 dk</option><option value="30">30 dk</option>
+        <option value="45" selected>45 dk</option><option value="60">60 dk</option>
+        <option value="75">75 dk</option><option value="90">90 dk</option><option value="120">120 dk</option>
+      </select>
+      <div class="row2">
+        <button type="submit" class="primary" id="fSubmit" data-i="add">Ekle</button>
+        <button type="button" id="fCancel" style="display:none" data-i="cancel">Vazgeç</button>
+      </div>
+    </form>
+  </div>
+
+  <details>
+    <summary data-i="pasteH">Tablodan yapıştır</summary>
+    <div class="inner">
+      <p class="hint" data-i="pasteHint">Google Sheets'ten saat + görev sütunlarını kopyalayıp buraya yapıştır. Örnek: "9:00-45  spor" veya "13:30/14:45  KVKK". Ara satırları atlanır.</p>
+      <textarea id="pasteBox" placeholder="9:00-45	spor&#10;10:00-45	write eng&#10;13:30/14:45	KVKK"></textarea>
+      <div class="btnrow"><button class="primary" id="pasteGo" data-i="pasteGo">Listeye ekle</button></div>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i="toolsH">Gün araçları</summary>
+    <div class="inner">
+      <div class="btnrow">
+        <button id="copyPrev" data-i="copyPrev">Önceki günü kopyala</button>
+        <button id="testAlarm" data-i="test">Alarmı test et</button>
+        <button id="clearDay" class="danger" data-i="clear">Günü temizle</button>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i="setH">Ayarlar</summary>
+    <div class="inner">
+      <div class="set"><label for="sLang" data-i="sLang">Dil / ses</label>
+        <select id="sLang"><option value="tr">Türkçe</option><option value="en">English</option></select></div>
+      <div class="set"><label for="sPre" data-i="sPre">Önceden haber ver</label>
+        <select id="sPre"><option value="0">—</option><option value="2">2 dk</option><option value="5">5 dk</option></select></div>
+      <div class="set"><label for="sRate" data-i="sRate">Konuşma hızı</label>
+        <select id="sRate"><option value="0.85">0.85×</option><option value="1">1×</option><option value="1.15">1.15×</option></select></div>
+      <div class="set"><label for="sBreak" data-i="sBreak">Bitince "ara" de</label>
+        <select id="sBreak"><option value="1">✓</option><option value="0">—</option></select></div>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i="bakH">Yedek</summary>
+    <div class="inner">
+      <p class="hint" data-i="bakHint">Görevler bu cihazda saklanır. Yedeği kopyalayıp güvenli bir yere yapıştır; geri yüklemek için buraya yapıştırıp "Geri yükle"ye bas.</p>
+      <textarea id="bakBox" spellcheck="false"></textarea>
+      <div class="btnrow">
+        <button id="bakCopy" data-i="bakCopy">Yedeği kopyala</button>
+        <button id="bakLoad" class="danger" data-i="bakLoad">Geri yükle</button>
+      </div>
+    </div>
+  </details>
+
+  <footer>v0.1</footer>
+</div>
+
+<div id="ov" role="dialog" aria-modal="true">
+  <div class="k" id="ovK"></div>
+  <div class="tm" id="ovTime"></div>
+  <div class="tt" id="ovTitle"></div>
+  <div class="sub" id="ovSub"></div>
+  <div class="ob">
+    <button class="b1" id="ovB1"></button>
+    <button class="b2" id="ovB2"></button>
+    <button class="b3" id="ovB3"></button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+var KEY='gunluk-plan-v1';
+var T={
+ tr:{app:'Günlük Plan',startDay:'Günü başlat',add:'Ekle',save:'Kaydet',cancel:'Vazgeç',titlePh:'Görev',
+  pasteH:'Tablodan yapıştır',pasteHint:'Google Sheets\'ten saat + görev sütunlarını kopyalayıp buraya yapıştır. Örnek: "9:00-45  spor" veya "13:30/14:45  KVKK". Ara satırları atlanır.',
+  pasteGo:'Listeye ekle',toolsH:'Gün araçları',copyPrev:'Önceki günü kopyala',test:'Alarmı test et',clear:'Günü temizle',
+  setH:'Ayarlar',sLang:'Dil / ses',sPre:'Önceden haber ver',sRate:'Konuşma hızı',sBreak:'Bitince "ara" de',
+  bakH:'Yedek',bakHint:'Görevler bu cihazda saklanır. Yedeği kopyalayıp güvenli bir yere yapıştır; geri yüklemek için buraya yapıştırıp "Geri yükle"ye bas.',
+  bakCopy:'Yedeği kopyala',bakLoad:'Geri yükle',
+  today:'Bugün',tomorrow:'Yarın',yesterday:'Dün',
+  bannerOff:'Sesli uyarılar için bir kez dokun. Telefonu şarja tak, uygulamayı açık bırak.',
+  bannerOn:'Aktif ✓ Sesli uyarılar açık.',bannerOnWake:'Aktif ✓ Ekran açık kalacak, sesli uyarılar açık.',bannerOnNoWake:'Aktif ✓ Ekranın kapanmaması için telefon ayarından ekran zaman aşımını uzat.',
+  now:'Şimdi',next:'Sıradaki',left:'kaldı',inT:'sonra',noMore:'Bugün için kalan görev yok',noTasks:'Bugün için görev yok — aşağıdan ekle',
+  doneOf:'tamamlandı',empty:'Bu gün için görev yok.',
+  st:{pending:'bekliyor',active:'sürüyor',done:'bitti',skipped:'atlandı',missed:'kaçtı',notdone:'bitmedi'},
+  ovStart:'Görev başlıyor',ovEnd:'Süre doldu',start:'Başla',snooze:'5 dk ertele',skip:'Atla',done:'Bitti ✓',notDone:'Bitmedi',close:'Kapat',
+  ovEndSub:'Bitirdin mi?',ovTest:'Test',
+  sayStart:function(t,x){return 'Saat '+t+'. Görev başlıyor: '+x;},
+  sayEnd:function(x){return x+' süresi doldu. Bitirdin mi?';},
+  sayPre:function(n,x){return n+' dakika sonra: '+x;},
+  sayBreak:'Güzel. Şimdi ara. Su iç, biraz hareket et.',
+  sayReady:'Hazırım. Görev saatlerinde seni uyaracağım.',
+  calm:'Sorun değil. Kaçanı kovalamak yok — bir sonraki göreve normal temposunda başla.',
+  imported:function(a,b){return a+' görev eklendi'+(b?', '+b+' satır atlandı':'')+'.';},
+  copied:'Kopyalandı.',copyFail:'Kopyalanamadı — kutudaki metni elle seç ve kopyala.',restored:'Geri yüklendi.',badBak:'Yedek okunamadı.',
+  sure:'Emin misin? Tekrar bas',copiedPrev:function(n){return n+' görev kopyalandı.';},nothingPrev:'Önceki günde görev yok.',
+  pre:'Yaklaşan'},
+ en:{app:'Daily Plan',startDay:'Start the day',add:'Add',save:'Save',cancel:'Cancel',titlePh:'Task',
+  pasteH:'Paste from sheet',pasteHint:'Copy the time + task columns from Google Sheets and paste here. Example: "9:00-45  sport" or "13:30/14:45  KVKK". Break rows are skipped.',
+  pasteGo:'Add to list',toolsH:'Day tools',copyPrev:'Copy previous day',test:'Test the alarm',clear:'Clear day',
+  setH:'Settings',sLang:'Language / voice',sPre:'Heads-up before',sRate:'Speech speed',sBreak:'Say "break" when done',
+  bakH:'Backup',bakHint:'Tasks are stored on this device. Copy the backup and keep it somewhere safe; to restore, paste it here and tap Restore.',
+  bakCopy:'Copy backup',bakLoad:'Restore',
+  today:'Today',tomorrow:'Tomorrow',yesterday:'Yesterday',
+  bannerOff:'Tap once to turn on voice alerts. Plug the phone in and keep the app open.',
+  bannerOn:'Active ✓ Voice alerts are on.',bannerOnWake:'Active ✓ Screen will stay on, voice alerts are on.',bannerOnNoWake:'Active ✓ To stop the screen sleeping, raise the screen timeout in phone settings.',
+  now:'Now',next:'Next',left:'left',inT:'from now',noMore:'No more tasks today',noTasks:'No tasks today — add one below',
+  doneOf:'done',empty:'No tasks for this day.',
+  st:{pending:'waiting',active:'running',done:'done',skipped:'skipped',missed:'missed',notdone:'not done'},
+  ovStart:'Task starting',ovEnd:'Time is up',start:'Start',snooze:'Snooze 5 min',skip:'Skip',done:'Done ✓',notDone:'Not done',close:'Close',
+  ovEndSub:'Did you finish?',ovTest:'Test',
+  sayStart:function(t,x){return 'It is '+t+'. Time to start: '+x;},
+  sayEnd:function(x){return 'Time is up for '+x+'. Did you finish?';},
+  sayPre:function(n,x){return 'In '+n+' minutes: '+x;},
+  sayBreak:'Good. Take a break now. Drink water and move a little.',
+  sayReady:'Ready. I will remind you at each task time.',
+  calm:'That\'s okay. No chasing what was missed — start the next task at normal pace.',
+  imported:function(a,b){return a+' tasks added'+(b?', '+b+' lines skipped':'')+'.';},
+  copied:'Copied.',copyFail:'Could not copy — select the text in the box and copy it by hand.',restored:'Restored.',badBak:'Backup could not be read.',
+  sure:'Sure? Tap again',copiedPrev:function(n){return n+' tasks copied.';},nothingPrev:'No tasks on the previous day.',
+  pre:'Coming up'}
+};
+
+function $(s){return document.querySelector(s);}
+function pad(n){return (n<10?'0':'')+n;}
+function keyOf(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function todayKey(){return keyOf(new Date());}
+function shiftKey(k,n){var p=k.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]+n);return keyOf(d);}
+function startTs(k,time){var p=k.split('-'),q=time.split(':');return new Date(+p[0],+p[1]-1,+p[2],+q[0],+q[1]).getTime();}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+var S=load();
+function load(){
+  var d=null;
+  try{d=JSON.parse(localStorage.getItem(KEY));}catch(e){}
+  if(!d||typeof d!=='object'||!d.days)d={days:{},settings:{}};
+  d.settings=Object.assign({lang:'tr',pre:2,rate:1,breakVoice:1},d.settings||{});
+  return d;
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function L(){return T[S.settings.lang]||T.tr;}
+function tasks(k){if(!S.days[k])S.days[k]=[];return S.days[k];}
+function sortDay(k){var a=tasks(k);a.sort(function(x,y){return startTs(k,x.time)-startTs(k,y.time);});}
+
+var viewKey=todayKey();
+var editingId=null;
+var unlocked=false, actx=null, wakeLock=null, wakeOk=false, swReg=null;
+
+/* ---------- i18n ---------- */
+function applyLang(){
+  var l=L();
+  document.documentElement.lang=S.settings.lang;
+  document.title=l.app;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i]'),function(el){var k=el.getAttribute('data-i');if(typeof l[k]==='string')el.textContent=l[k];});
+  Array.prototype.forEach.call(document.querySelectorAll('[data-ip]'),function(el){el.placeholder=l[el.getAttribute('data-ip')];});
+  $('#fSubmit').textContent=editingId?l.save:l.add;
+}
+
+/* ---------- audio / voice ---------- */
+var voices=[];
+function loadVoices(){try{voices=speechSynthesis.getVoices()||[];}catch(e){voices=[];}}
+try{loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}catch(e){}
+function pickVoice(lang){
+  var base=lang.slice(0,2),best=null;
+  for(var i=0;i<voices.length;i++){var v=voices[i];if(!v.lang)continue;
+    if(v.lang.replace('_','-').toLowerCase()===lang.toLowerCase())return v;
+    if(!best&&v.lang.toLowerCase().indexOf(base)===0)best=v;}
+  return best;
+}
+function speak(text){
+  try{
+    if(!('speechSynthesis' in window))return;
+    var u=new SpeechSynthesisUtterance(text);
+    var lang=S.settings.lang==='tr'?'tr-TR':'en-US';
+    u.lang=lang;var v=pickVoice(lang);if(v)u.voice=v;
+    u.rate=+S.settings.rate||1;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }catch(e){}
+}
+function beep(n){
+  if(!actx)return;
+  try{
+    if(actx.state==='suspended')actx.resume();
+    var t0=actx.currentTime+0.05;
+    for(var i=0;i<n;i++){
+      var o=actx.createOscillator(),g=actx.createGain(),t=t0+i*0.38;
+      o.type='sine';o.frequency.value=i%2?660:880;o.connect(g);g.connect(actx.destination);
+      g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.28);
+      o.start(t);o.stop(t+0.3);
+    }
+  }catch(e){}
+}
+function vibrate(p){try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}}
+function alertOut(text,beeps){beep(beeps);vibrate([300,150,300,150,300]);setTimeout(function(){speak(text);},beeps?beeps*380+250:0);}
+function notify(title,body){
+  try{
+    if(!('Notification' in window)||Notification.permission!=='granted')return;
+    if(document.visibilityState==='visible')return;
+    if(swReg&&swReg.showNotification)swReg.showNotification(title,{body:body,icon:'icon.svg',tag:'plan',renotify:true,requireInteraction:true,vibrate:[300,150,300]});
+    else new Notification(title,{body:body});
+  }catch(e){}
+}
+function keepAwake(){
+  try{
+    if(!('wakeLock' in navigator)){wakeOk=false;renderBanner();return;}
+    navigator.wakeLock.request('screen').then(function(w){
+      wakeLock=w;wakeOk=true;renderBanner();
+      w.addEventListener('release',function(){wakeOk=false;renderBanner();});
+    }).catch(function(){wakeOk=false;renderBanner();});
+  }catch(e){wakeOk=false;renderBanner();}
+}
+function unlock(){
+  try{if(!actx){var AC=window.AudioContext||window.webkitAudioContext;if(AC)actx=new AC();}if(actx&&actx.state==='suspended')actx.resume();}catch(e){}
+  unlocked=true;
+  keepAwake();
+  try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().catch(function(){});}catch(e){}
+  beep(1);setTimeout(function(){speak(L().sayReady);},400);
+  renderBanner();
+}
+
+/* ---------- alarm engine ---------- */
+var queue=[],cur=null,repeatTimer=null,repeatCount=0;
+function findTask(k,id){var a=S.days[k]||[];for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];return null;}
+function enqueue(type,k,t){
+  if(cur&&cur.id===t.id&&cur.type===type)return;
+  for(var i=0;i<queue.length;i++)if(queue[i].id===t.id&&queue[i].type===type)return;
+  queue.push({type:type,key:k,id:t.id});
+  if(!cur)showNext();
+}
+function dropAlerts(id){
+  queue=queue.filter(function(q){return q.id!==id;});
+  if(cur&&cur.id===id)closeOv();
+}
+function tick(){
+  var now=Date.now(),changed=false,l=L(),keys=[shiftKey(todayKey(),-1),todayKey()];
+  keys.forEach(function(k){
+    (S.days[k]||[]).forEach(function(t){
+      var st=startTs(k,t.time),en=st+t.dur*60000;
+      if(t.status==='pending'){
+        if(now>=en){t.status='missed';changed=true;dropAlerts(t.id);return;}
+        var pre=+S.settings.pre;
+        if(pre>0&&!t.pre&&now<st&&now>=st-pre*60000){
+          t.pre=true;changed=true;
+          if(unlocked&&!cur){beep(1);setTimeout(function(){speak(l.sayPre(pre,t.title));},450);}
+          toast(l.pre+': '+t.time+' — '+t.title);
+          notify(l.pre+' '+t.time,t.title);
+        }
+        if(now>=st&&!t.alerted&&(!t.snooze||now>=t.snooze)){t.alerted=true;t.snooze=0;changed=true;enqueue('start',k,t);}
+      }else if(t.status==='active'){
+        if(now>=en&&!t.ended){t.ended=true;changed=true;enqueue('end',k,t);}
+      }
+    });
+  });
+  if(changed){save();renderList();}
+  renderNow();
+}
+function showNext(){
+  cur=queue.shift()||null;
+  if(!cur){$('#ov').className='';return;}
+  var l=L(),ov=$('#ov');
+  if(cur.type==='test'){
+    ov.className='show';$('#ovK').textContent=l.ovTest;$('#ovTime').textContent=fmtClock(new Date());
+    $('#ovTitle').textContent=cur.title;$('#ovSub').textContent='';
+    setBtns([l.close],[]);alertOut(l.sayStart(fmtClock(new Date()),cur.title),3);return;
+  }
+  var t=findTask(cur.key,cur.id);
+  if(!t){cur=null;showNext();return;}
+  $('#ovTime').textContent=t.time;$('#ovTitle').textContent=t.title;
+  if(cur.type==='start'){
+    ov.className='show';$('#ovK').textContent=l.ovStart;$('#ovSub').textContent=t.dur+' dk';
+    setBtns([l.start,l.snooze,l.skip]);
+    var say=l.sayStart(t.time,t.title);
+    alertOut(say,3);notify(l.ovStart+' '+t.time,t.title);
+    repeatCount=0;clearInterval(repeatTimer);
+    repeatTimer=setInterval(function(){repeatCount++;if(repeatCount>4||!cur){clearInterval(repeatTimer);return;}alertOut(say,2);},30000);
+  }else{
+    ov.className='show end';$('#ovK').textContent=l.ovEnd;$('#ovSub').textContent=l.ovEndSub;
+    setBtns([l.done,l.notDone]);
+    alertOut(l.sayEnd(t.title),2);notify(l.ovEnd,t.title);
+    clearInterval(repeatTimer);repeatCount=0;
+    repeatTimer=setInterval(function(){repeatCount++;if(repeatCount>1||!cur){clearInterval(repeatTimer);return;}alertOut(l.sayEnd(t.title),2);},60000);
+  }
+}
+function setBtns(labels){
+  ['#ovB1','#ovB2','#ovB3'].forEach(function(s,i){var b=$(s);if(labels[i]){b.textContent=labels[i];b.style.display='';}else b.style.display='none';});
+}
+function closeOv(){
+  clearInterval(repeatTimer);try{speechSynthesis.cancel();}catch(e){}
+  cur=null;$('#ov').className='';
+  save();renderList();renderNow();
+  setTimeout(showNext,300);
+}
+function ovAction(n){
+  if(!cur)return;
+  var l=L(),now=Date.now();
+  if(cur.type==='test'){closeOv();return;}
+  var t=findTask(cur.key,cur.id);if(!t){closeOv();return;}
+  if(cur.type==='start'){
+    if(n===1){t.status='active';t.startedAt=now;}
+    else if(n===2){t.alerted=false;t.snooze=now+5*60000;}
+    else{t.status='skipped';}
+  }else{
+    if(n===1){var k0=cur.key;t.status='done';closeOv();if(+S.settings.breakVoice&&hasLater(k0,t))setTimeout(function(){speak(l.sayBreak);},350);return;}
+    else{t.status='notdone';toast(l.calm,6000);}
+  }
+  closeOv();
+}
+function hasLater(k,t){var st=startTs(k,t.time);return (S.days[k]||[]).some(function(x){return x.status==='pending'&&startTs(k,x.time)>st;});}
+$('#ovB1').onclick=function(){ovAction(1);};
+$('#ovB2').onclick=function(){ovAction(2);};
+$('#ovB3').onclick=function(){ovAction(3);};
+
+/* ---------- render ---------- */
+function fmtClock(d){return pad(d.getHours())+':'+pad(d.getMinutes());}
+function fmtDur(ms){
+  var s=Math.max(0,Math.round(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;
+  return h?h+':'+pad(m)+':'+pad(ss):pad(m)+':'+pad(ss);
+}
+function renderBanner(){
+  var l=L(),b=$('#banner');
+  if(!unlocked){b.className='card banner';$('#bannerText').textContent=l.bannerOff;$('#startDay').style.display='';}
+  else{b.className='card banner ok';$('#bannerText').textContent=wakeOk?l.bannerOnWake:l.bannerOnNoWake;$('#startDay').style.display='none';}
+}
+function renderDate(){
+  var l=L(),p=viewKey.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]),tk=todayKey(),tag='';
+  if(viewKey===tk)tag=l.today;else if(viewKey===shiftKey(tk,1))tag=l.tomorrow;else if(viewKey===shiftKey(tk,-1))tag=l.yesterday;
+  var txt;try{txt=d.toLocaleDateString(S.settings.lang==='tr'?'tr-TR':'en-GB',{weekday:'long',day:'numeric',month:'long'});}catch(e){txt=viewKey;}
+  $('#dateLabel').innerHTML=esc(txt)+(tag?'<small>'+esc(tag)+'</small>':'');
+}
+function renderNow(){
+  var l=L(),k=todayKey(),now=Date.now(),a=(S.days[k]||[]).slice().sort(function(x,y){return startTs(k,x.time)-startTs(k,y.time);});
+  var current=null,next=null;
+  a.forEach(function(t){var st=startTs(k,t.time),en=st+t.dur*60000;
+    if(!current&&(t.status==='active'||(t.status==='pending'&&now>=st))&&now<en)current=t;
+    if(!next&&t.status==='pending'&&st>now)next=t;});
+  var done=a.filter(function(t){return t.status==='done';}).length,html='';
+  if(!a.length)html='<div class="meta">'+esc(l.noTasks)+'</div>';
+  else{
+    if(current){var en=startTs(k,current.time)+current.dur*60000;
+      html+='<div class="label">'+esc(l.now)+'</div><div class="title">'+esc(current.title)+'</div><div class="big">'+fmtDur(en-now)+'</div><div class="meta">'+esc(l.left)+'</div>';}
+    if(next){var st=startTs(k,next.time);
+      html+=(current?'<div style="height:10px"></div>':'')+'<div class="label">'+esc(l.next)+'</div><div class="title"'+(current?' style="font-size:17px"':'')+'>'+esc(next.time+' · '+next.title)+'</div>'+
+        (current?'':'<div class="big">'+fmtDur(st-now)+'</div>')+'<div class="meta">'+(current?esc(fmtDur(st-now)+' '+l.inT):esc(l.inT))+'</div>';}
+    if(!current&&!next)html+='<div class="title" style="font-size:17px">'+esc(l.noMore)+'</div>';
+    html+='<div class="bar"><i style="width:'+Math.round(done/a.length*100)+'%"></i></div><div class="meta" style="margin-top:6px">'+done+' / '+a.length+' '+esc(l.doneOf)+'</div>';
+  }
+  $('#nowCard').innerHTML=html;
+}
+function renderList(){
+  var l=L(),k=viewKey;sortDay(k);
+  var a=tasks(k),now=Date.now(),ul=$('#list');
+  if(!a.length){ul.innerHTML='<li class="empty">'+esc(l.empty)+'</li>';return;}
+  ul.innerHTML=a.map(function(t){
+    var st=startTs(k,t.time),en=st+t.dur*60000,isCur=(t.status==='active'||t.status==='pending')&&now>=st&&now<en;
+    return '<li class="task '+(isCur?'cur ':'')+(t.status==='done'?'done':'')+'" data-id="'+t.id+'">'+
+      '<div class="t">'+esc(t.time)+'<small>'+t.dur+' dk</small></div>'+
+      '<div class="name">'+esc(t.title)+'</div>'+
+      '<div class="acts"><button class="chip '+t.status+'" data-act="cycle">'+esc(l.st[t.status]||t.status)+'</button>'+
+      '<button class="ghost" data-act="edit" aria-label="edit">✎</button><button class="ghost danger" data-act="del" aria-label="delete">✕</button></div></li>';
+  }).join('');
+}
+function renderAll(){applyLang();renderBanner();renderDate();renderList();renderNow();fillSettings();}
+
+/* ---------- list actions ---------- */
+var armed={};
+function twoTap(btn,key,fn){
+  if(armed[key]){clearTimeout(armed[key].t);delete armed[key];fn();return;}
+  var old=btn.textContent;btn.textContent=btn.getAttribute('aria-label')==='delete'?'?':L().sure;
+  armed[key]={t:setTimeout(function(){btn.textContent=old;delete armed[key];},3000)};
+}
+$('#list').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  var li=b.closest('li');if(!li)return;var id=li.getAttribute('data-id'),t=findTask(viewKey,id);if(!t)return;
+  var act=b.getAttribute('data-act');
+  if(act==='cycle'){
+    var order=['pending','done','skipped'];var i=order.indexOf(t.status);
+    t.status=order[(i+1)%order.length];
+    if(t.status==='pending'){t.alerted=false;t.ended=false;t.snooze=0;}
+    else dropAlerts(t.id);
+    save();renderList();renderNow();
+  }else if(act==='edit'){
+    editingId=id;$('#fTime').value=t.time.slice(0,5)==='24:00'?'23:59':t.time;$('#fTitle').value=t.title;
+    setDur(t.dur);$('#fCancel').style.display='';applyLang();$('#fTitle').focus();
+    $('#addForm').scrollIntoView({behavior:'smooth',block:'center'});
+  }else if(act==='del'){
+    twoTap(b,'del'+id,function(){S.days[viewKey]=tasks(viewKey).filter(function(x){return x.id!==id;});dropAlerts(id);save();renderList();renderNow();});
+  }
+});
+function setDur(d){
+  var sel=$('#fDur'),has=false;
+  Array.prototype.forEach.call(sel.options,function(o){if(+o.value===+d)has=true;});
+  if(!has){var o=document.createElement('option');o.value=d;o.textContent=d+' dk';sel.appendChild(o);}
+  sel.value=String(d);
+}
+function resetForm(){editingId=null;$('#fTitle').value='';$('#fCancel').style.display='none';setDur(45);applyLang();}
+$('#fCancel').onclick=resetForm;
+$('#addForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var time=$('#fTime').value,title=$('#fTitle').value.trim(),dur=+$('#fDur').value||45;
+  if(!time||!title)return;
+  if(editingId){
+    var t=findTask(viewKey,editingId);
+    if(t){var moved=t.time!==time||t.dur!==dur;t.time=time;t.title=title;t.dur=dur;
+      if(moved&&t.status!=='done'){t.status='pending';t.alerted=false;t.pre=false;t.ended=false;t.snooze=0;dropAlerts(t.id);}}
+    resetForm();
+  }else{
+    tasks(viewKey).push(newTask(time,title,dur));
+    $('#fTitle').value='';
+    var q=time.split(':'),m=+q[0]*60+(+q[1])+60;if(m<24*60)$('#fTime').value=pad(Math.floor(m/60))+':'+pad(m%60);
+    $('#fTitle').focus();
+  }
+  save();renderList();renderNow();tick();
+});
+function newTask(time,title,dur){return {id:uid(),time:time,title:title,dur:dur,status:'pending',alerted:false,pre:false,ended:false,snooze:0};}
+
+/* ---------- paste import ---------- */
+function parseLines(txt){
+  var out=[],skipped=0;
+  txt.split(/\r?\n/).forEach(function(raw){
+    var line=raw.replace(/ /g,' ').trim();if(!line)return;
+    var m=line.match(/^(\d{1,2})[:.](\d{2})(?:\s*[-–\/]\s*(?:(\d{1,2})[:.](\d{2})|(\d{1,2})(?!\d)))?[\s,;|]*(.*)$/);
+    if(!m){skipped++;return;}
+    var hh=+m[1],mm=+m[2];if(hh>24||mm>59){skipped++;return;}
+    var title=(m[6]||'').replace(/\t+/g,' — ').replace(/\s+/g,' ').replace(/^[—\-\s]+|[—\-\s]+$/g,'').trim();
+    if(!title||/^\d+\s*dk\s*ara/i.test(title)||/^paydos$/i.test(title)){skipped++;return;}
+    var s=hh*60+mm,dur=45;
+    if(m[3]!==undefined){var e2=+m[3]*60+(+m[4]);dur=e2-s;}
+    else if(m[5]!==undefined){var e=hh*60+(+m[5]);if(e<=s)e+=60;dur=e-s;}
+    if(!(dur>0&&dur<=300))dur=45;
+    out.push(newTask(pad(hh)+':'+pad(mm),title.slice(0,140),dur));
+  });
+  return {tasks:out,skipped:skipped};
+}
+$('#pasteGo').onclick=function(){
+  var r=parseLines($('#pasteBox').value);
+  Array.prototype.push.apply(tasks(viewKey),r.tasks);
+  $('#pasteBox').value='';save();renderList();renderNow();tick();
+  toast(L().imported(r.tasks.length,r.skipped));
+};
+
+/* ---------- day tools ---------- */
+$('#copyPrev').onclick=function(){
+  var prev=S.days[shiftKey(viewKey,-1)]||[];
+  if(!prev.length){toast(L().nothingPrev);return;}
+  prev.forEach(function(t){tasks(viewKey).push(newTask(t.time,t.title,t.dur));});
+  save();renderList();renderNow();tick();toast(L().copiedPrev(prev.length));
+};
+$('#clearDay').onclick=function(){
+  var b=this;twoTap(b,'clear',function(){tasks(viewKey).forEach(function(t){dropAlerts(t.id);});S.days[viewKey]=[];save();renderList();renderNow();b.textContent=L().clear;});
+};
+$('#testAlarm').onclick=function(){
+  if(!unlocked)unlock();
+  queue.push({type:'test',id:'test',title:S.settings.lang==='tr'?'Örnek görev — İngilizce okuma':'Sample task — English reading'});
+  if(!cur)setTimeout(showNext,500);
+};
+$('#prevDay').onclick=function(){viewKey=shiftKey(viewKey,-1);resetForm();renderDate();renderList();};
+$('#nextDay').onclick=function(){viewKey=shiftKey(viewKey,1);resetForm();renderDate();renderList();};
+$('#dateLabel').onclick=function(){viewKey=todayKey();renderDate();renderList();};
+$('#startDay').onclick=unlock;
+
+/* ---------- settings ---------- */
+function fillSettings(){$('#sLang').value=S.settings.lang;$('#sPre').value=String(S.settings.pre);$('#sRate').value=String(S.settings.rate);$('#sBreak').value=String(+S.settings.breakVoice);}
+$('#sLang').onchange=function(){S.settings.lang=this.value;save();renderAll();};
+$('#sPre').onchange=function(){S.settings.pre=+this.value;save();};
+$('#sRate').onchange=function(){S.settings.rate=+this.value;save();speak(S.settings.lang==='tr'?'Konuşma hızı bu.':'This is the speech speed.');};
+$('#sBreak').onchange=function(){S.settings.breakVoice=+this.value;save();};
+
+/* ---------- backup ---------- */
+document.querySelector('details:last-of-type').addEventListener('toggle',function(){if(this.open)$('#bakBox').value=JSON.stringify(S);});
+$('#bakCopy').onclick=function(){
+  var box=$('#bakBox'),txt=JSON.stringify(S);box.value=txt;
+  try{navigator.clipboard.writeText(txt).then(function(){toast(L().copied);},function(){box.select();toast(L().copyFail);});}
+  catch(e){box.select();toast(L().copyFail);}
+};
+$('#bakLoad').onclick=function(){
+  var b=this;twoTap(b,'bak',function(){
+    b.textContent=L().bakLoad;
+    try{var d=JSON.parse($('#bakBox').value);if(!d||!d.days)throw 0;S=d;S.settings=Object.assign({lang:'tr',pre:2,rate:1,breakVoice:1},S.settings||{});save();renderAll();toast(L().restored);}
+    catch(e){toast(L().badBak);}
+  });
+};
+
+/* ---------- toast ---------- */
+var toastT=null;
+function toast(msg,ms){var el=$('#toast');el.textContent=msg;el.style.display='block';clearTimeout(toastT);toastT=setTimeout(function(){el.style.display='none';},ms||3200);}
+
+/* ---------- boot ---------- */
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){if(unlocked&&!wakeOk)keepAwake();tick();}});
+try{
+  if('serviceWorker' in navigator&&location.protocol==='https:'){
+    navigator.serviceWorker.register('sw.js').then(function(r){swReg=r;}).catch(function(){});
+  }
+}catch(e){}
+(function initTime(){var d=new Date();d.setMinutes(0);d.setHours(Math.min(23,d.getHours()+1));$('#fTime').value=fmtClock(d);})();
+renderAll();tick();
+setInterval(function(){
+  var tk=todayKey();
+  if(window.__lastDay&&window.__lastDay!==tk&&viewKey===window.__lastDay){viewKey=tk;renderDate();renderList();}
+  window.__lastDay=tk;tick();
+},1000);
+})();
+</script>
+</body>
+</html>
